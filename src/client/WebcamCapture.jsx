@@ -7,7 +7,8 @@ class WebcamCapture extends React.Component {
   constructor() {
     super();
     this.state = {
-      status: 'Waiting for an action'
+      status: 'Waiting for an action',
+      result: []
     }
   }
   setRef = webcam => {
@@ -21,17 +22,27 @@ class WebcamCapture extends React.Component {
       .then(data => {
         // if it does, let the user know it's there
         if (!!data.length) {
-          this.setState({ dataSrc: 'Item is already stored in your record' })
+          this.setState(
+            { status: 'Item is already stored in your record' }
+          )
         } else {
           // if not, make another request to have the upc api get product information and store into db
           fetch(`http://localhost:8080/upc/${upc.slice(1)}`)
-            .then(_ => this.setState({ dataSrc: 'New item added to database.' }))
+            .then(_ => this.setState({ status: 'New item added to database.' }))
         }
       });
   }
 
-  // takes in base64/jpg uri and looks for barcode. If one is found, make a request to our db. 
-  getUPC = src => {
+  checkIfExists = upc => {
+    fetch(`http://localhost:8080/checkitem/${upc.slice(1)}`)
+      .then(response => response.json())
+      .then(data => {
+        this.setState({ status: 'Item Found', result: data[0] })
+      })
+  }
+
+  // takes in base64/jpg uri and looks for barcode. If one is found, make a request to 
+  getUPC = (src, exists) => {
     Quagga.decodeSingle({
       decoder: {
         readers: [
@@ -63,18 +74,26 @@ class WebcamCapture extends React.Component {
       debug: true,
       src
     }, (result) => {
-      if (!!result) {
+      if (!!result && exists) {
+        this.checkIfExists(result.codeResult.code);
+      }
+      else if (!!result) {
         console.log(result.codeResult);
         this.makeRequest(result.codeResult.code);
       } else {
-        this.setState({ dataSrc: 'Issue reading barcode. Try again.' })
+        this.setState({ status: 'Issue reading barcode. Try again.' })
       }
     })
   }
 
   capture = () => {
     const imageSrc = this.webcam.getScreenshot();
-    this.getUPC(imageSrc);
+    this.getUPC(imageSrc, false);
+  };
+
+  search = () => {
+    const imageSrc = this.webcam.getScreenshot();
+    this.getUPC(imageSrc, true);
   };
 
   render() {
@@ -94,9 +113,18 @@ class WebcamCapture extends React.Component {
           width={800}
           videoConstraints={videoConstraints}
         />
-        <button onClick={this.capture}>Search By UPC</button>
+        <button onClick={this.capture}>Record Item</button>
+        <button onClick={this.search}>Search By Code</button>
 
         <p>{'Status: ' + this.state.status}</p>
+        <div>
+          <img src={this.state.result.images} />
+          <p>{this.state.result.barcode}</p>
+          <p>{this.state.result.productname}</p>
+          <p>{this.state.result.manufacturer}</p>
+          <p>{this.state.result.brand}</p>
+          <p>{this.state.result.description}</p>
+        </div>
       </div>
     );
   }
