@@ -1,6 +1,6 @@
 import React from "react";
-import Webcam from "react-webcam";
-import Quagga from 'quagga';
+import Webcam from "react-webcam"; // handles getUserMedia() for access to camera and to take screenshots
+import Quagga from 'quagga'; // handles image processing to read the barcode for our captures
 
 // const corsEndpoint = 'https://cors-anywhere.herokuapp.com/'
 class WebcamCapture extends React.Component {
@@ -15,19 +15,22 @@ class WebcamCapture extends React.Component {
   };
 
   makeRequest = upc => {
+    // first check if item exists
     fetch(`http://localhost:8080/checkitem/${upc.slice(1)}`)
       .then(response => response.json())
       .then(data => {
+        // if it does, let the user know it's there
         if (!!data.length) {
-          // if not 0,
           this.setState({ dataSrc: 'Item is already stored in your record' })
         } else {
+          // if not, make another request to have the upc api get product information and store into db
           fetch(`http://localhost:8080/upc/${upc.slice(1)}`)
             .then(_ => this.setState({ dataSrc: 'New item added to database.' }))
         }
       });
   }
 
+  // takes in base64/jpg uri and looks for barcode. If one is found, make a request to our db. 
   getUPC = src => {
     Quagga.decodeSingle({
       decoder: {

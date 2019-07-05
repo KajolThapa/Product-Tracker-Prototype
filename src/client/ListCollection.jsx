@@ -15,6 +15,7 @@ class ListCollection extends React.Component {
         fetch('http://localhost:8080/getall')
             .then(request => request.json())
             .then(data => {
+                // couldn't use .map(). React would throw a warning regarding private variables when loaded from the bundle
                 data.forEach((item, i) => {
                     list.push(
                         <li keys={i}>
